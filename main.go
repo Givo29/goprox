@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"slices"
@@ -72,7 +74,34 @@ func (c *Config) handler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Println(matchedRoute.Pass)
+	resp := proxyRequest(*req, *matchedRoute)
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.Header().Set("Content-Encoding", resp.Header.Get("Content-Encoding"))
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Fprint(w, string(bodyBytes))
+}
+
+func proxyRequest(req http.Request, matchedRoute Route) http.Response {
+	newUrl, err := url.Parse(matchedRoute.Pass)
+	if err != nil {
+		log.Fatalln("Unable to parse URL of matched route:", matchedRoute.Pass, err)
+	}
+	req.RequestURI = ""
+	req.Host = newUrl.Host
+	req.URL = newUrl
+
+	client := &http.Client{}
+
+	resp, err := client.Do(&req)
+	if err != nil {
+		log.Fatalln("Unable to send request:", err)
+	}
+
+	return *resp
 }
 
 func main() {

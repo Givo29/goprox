@@ -8,9 +8,9 @@ virtualhosts:
       - s1
     routes:
       - pattern: /hi
-        pass: http://localhost:8081/hi
-      - pattern: ^/bye/*
-        pass: http://localhost:8081/bye
+        pass: http://localhost:8081/
+      - pattern: ^/beers/*
+        pass: https://google.com
   - host: service2
     aliases:
       - ser2
