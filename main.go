@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 )
@@ -35,23 +36,17 @@ func (c *Config) handler(w http.ResponseWriter, req *http.Request) {
 		fmt.Println("Could not split port")
 	}
 
-	fmt.Println(hostname)
 	var matchedHost *Virtualhost
 	for i := range c.Virtualhosts {
 		vh := &c.Virtualhosts[i]
-		fmt.Println(vh.Host)
 		if vh.Host == hostname {
-			fmt.Println("match on", vh.Host)
 			matchedHost = vh
 			break
 		}
 
-		for _, alias := range vh.Aliases {
-			if alias == hostname {
-				fmt.Println("match on", alias)
-				matchedHost = vh
-				break
-			}
+		if slices.Contains(vh.Aliases, hostname) {
+			matchedHost = vh
+			break
 		}
 	}
 
@@ -73,6 +68,10 @@ func (c *Config) handler(w http.ResponseWriter, req *http.Request) {
 
 	}
 
+	if matchedRoute == nil {
+		return
+	}
+
 	fmt.Println(matchedRoute.Pass)
 }
 
@@ -90,11 +89,6 @@ func main() {
 		return
 	}
 	http.HandleFunc("/", config.handler)
-
-	fmt.Println(config.Virtualhosts)
-	for _, virtualhost := range config.Virtualhosts {
-		fmt.Println(virtualhost.Host)
-	}
 
 	fmt.Println("Server started on port", config.Server.Port)
 	http.ListenAndServe(fmt.Sprintf(":%d", config.Server.Port), nil)
